@@ -15,28 +15,30 @@ class BaseProvider(ABC):
         self.tenant_id = tenant_id
 
     def get_provider_api_key(self, model_id: Optional[str] = None, prefer_custom: bool = True) -> Union[str | dict]:
-        """
-        Returns the decrypted API key for the given tenant_id and provider_name.
-        If the provider is of type SYSTEM and the quota is exceeded, raises a QuotaExceededError.
-        If the provider is not found or not valid, raises a ProviderTokenNotInitError.
-        """
-        provider = self.get_provider(prefer_custom)
-        if not provider:
-            raise ProviderTokenNotInitError()
+        return 'adsf'
+        # """
+        # Returns the decrypted API key for the given tenant_id and provider_name.
+        # If the provider is of type SYSTEM and the quota is exceeded, raises a QuotaExceededError.
+        # If the provider is not found or not valid, raises a ProviderTokenNotInitError.
+        # """
+        # provider = self.get_provider(prefer_custom)
+        # if not provider:
+        #     print("ignore get_provider_api_key not provider")
+        #     # raise ProviderTokenNotInitError()
 
-        if provider.provider_type == ProviderType.SYSTEM.value:
-            quota_used = provider.quota_used if provider.quota_used is not None else 0
-            quota_limit = provider.quota_limit if provider.quota_limit is not None else 0
+        # if provider.provider_type == ProviderType.SYSTEM.value:
+        #     quota_used = provider.quota_used if provider.quota_used is not None else 0
+        #     quota_limit = provider.quota_limit if provider.quota_limit is not None else 0
 
-            if model_id and model_id == 'gpt-4':
-                raise ModelCurrentlyNotSupportError()
+        #     if model_id and model_id == 'gpt-4':
+        #         raise ModelCurrentlyNotSupportError()
 
-            if quota_used >= quota_limit:
-                raise QuotaExceededError()
+        #     if quota_used >= quota_limit:
+        #         raise QuotaExceededError()
 
-            return self.get_hosted_credentials()
-        else:
-            return self.get_decrypted_token(provider.encrypted_config)
+        #     return self.get_hosted_credentials()
+        # else:
+        #     return self.get_decrypted_token(provider.encrypted_config)
 
     def get_provider(self, prefer_custom: bool) -> Optional[Provider]:
         """
@@ -78,10 +80,12 @@ class BaseProvider(ABC):
 
     def get_hosted_credentials(self) -> str:
         if self.get_provider_name() != ProviderName.OPENAI:
-            raise ProviderTokenNotInitError()
+            print("ignore get_provider_name not provider")
+            # raise ProviderTokenNotInitError()
 
         if not hosted_llm_credentials.openai or not hosted_llm_credentials.openai.api_key:
-            raise ProviderTokenNotInitError()
+            print("ignore hosted_llm_credentials not provider")
+            # raise ProviderTokenNotInitError()
 
         return hosted_llm_credentials.openai.api_key
 

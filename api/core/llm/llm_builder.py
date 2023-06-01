@@ -36,7 +36,8 @@ class LLMBuilder:
         if model_name == 'fake':
             return FakeListLLM(responses=[])
 
-        provider = cls.get_default_provider(tenant_id)
+        # provider = cls.get_default_provider(tenant_id)
+        provider = 'openai'
 
         mode = cls.get_mode_by_model(model_name)
         if mode == 'chat':
@@ -116,9 +117,11 @@ class LLMBuilder:
 
     @classmethod
     def get_default_provider(cls, tenant_id: str) -> str:
+        return 'openai'
         provider = BaseProvider.get_valid_provider(tenant_id)
         if not provider:
-            raise ProviderTokenNotInitError()
+            print("ignore get_default_provider not provider")
+            # raise ProviderTokenNotInitError()
 
         if provider.provider_type == ProviderType.SYSTEM.value:
             provider_name = 'openai'

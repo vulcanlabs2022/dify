@@ -32,7 +32,7 @@ class StreamableOpenAI(OpenAI):
     def _invocation_params(self) -> Dict[str, Any]:
         return {**super()._invocation_params, **{
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://localhost:8000/v1"),
+            "api_base": os.environ.get("OPENAI_API_BASE", "http://172.17.0.1:8000/v1"),
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,
@@ -42,7 +42,7 @@ class StreamableOpenAI(OpenAI):
     def _identifying_params(self) -> Mapping[str, Any]:
         return {**super()._identifying_params, **{
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://localhost:8000/v1"),
+            "api_base": os.environ.get("OPENAI_API_BASE", "http://172.17.0.1:8000/v1"),
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,

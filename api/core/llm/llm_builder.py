@@ -38,7 +38,6 @@ class LLMBuilder:
 
         # provider = cls.get_default_provider(tenant_id)
         provider = 'openai'
-
         mode = cls.get_mode_by_model(model_name)
         if mode == 'chat':
             if provider == 'openai':
@@ -55,6 +54,7 @@ class LLMBuilder:
 
         model_credentials = cls.get_model_credentials(tenant_id, provider, model_name)
 
+        model_name = 'openai'
         return llm_cls(
             model_name=model_name,
             temperature=kwargs.get('temperature', 0),

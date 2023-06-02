@@ -9,7 +9,8 @@ models = {
     'text-curie-001': 'openai',  # 2,049 tokens
     'text-babbage-001': 'openai',  # 2,049 tokens
     'text-ada-001': 'openai',  # 2,049 tokens
-    'text-embedding-ada-002': 'openai'  # 8191 tokens, 1536 dimensions
+    'text-embedding-ada-002': 'openai',  # 8191 tokens, 1536 dimensions
+    'openai' : 'openai'
 }
 
 max_context_token_length = {
@@ -21,7 +22,8 @@ max_context_token_length = {
     'text-curie-001': 2049,
     'text-babbage-001': 2049,
     'text-ada-001': 2049,
-    'text-embedding-ada-002': 8191
+    'text-embedding-ada-002': 8191,
+    'openai': 4096,
 }
 
 models_by_mode = {
@@ -29,6 +31,7 @@ models_by_mode = {
         'gpt-4',  # 8,192 tokens
         'gpt-4-32k',  # 32,768 tokens
         'gpt-3.5-turbo',  # 4,096 tokens
+        'openai'
     ],
     'completion': [
         'gpt-4',  # 8,192 tokens
@@ -39,6 +42,7 @@ models_by_mode = {
         'text-curie-001',  # 2,049 tokens
         'text-babbage-001',  # 2,049 tokens
         'text-ada-001'  # 2,049 tokens
+        'openai'
     ],
     'embedding': [
         'text-embedding-ada-002'  # 8191 tokens, 1536 dimensions
@@ -57,6 +61,10 @@ model_prices = {
         'completion': Decimal('0.12')
     },
     'gpt-3.5-turbo': {
+        'prompt': Decimal('0.002'),
+        'completion': Decimal('0.002')
+    },
+    'openai': {
         'prompt': Decimal('0.002'),
         'completion': Decimal('0.002')
     },

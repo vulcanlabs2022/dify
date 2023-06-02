@@ -302,8 +302,8 @@ And answer according to the language of the user's question.
         model_limited_tokens = llm_constant.max_context_token_length[llm.model_name]
         max_tokens = llm.max_tokens
 
-        if model_limited_tokens - max_tokens - llm.get_num_tokens(query) < 0:
-            raise LLMBadRequestError("Query is too long")
+        # if model_limited_tokens - max_tokens - llm.get_num_tokens(query) < 0:
+        #     raise LLMBadRequestError("Query is too long")
 
     @classmethod
     def recale_llm_max_tokens(cls, final_llm: Union[StreamableOpenAI, StreamableChatOpenAI],

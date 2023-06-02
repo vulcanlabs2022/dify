@@ -41,7 +41,7 @@ class StreamableChatOpenAI(ChatOpenAI):
         return {
             **super()._default_params,
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://host.docker.internal:8000/v1"),
+            "api_base": os.environ.get("OPENAI_API_BASE", "http://192.168.220.193:8000/v1"),
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,
@@ -124,3 +124,9 @@ class StreamableChatOpenAI(ChatOpenAI):
             self, messages: List[List[BaseMessage]], stop: Optional[List[str]] = None
     ) -> LLMResult:
         return await super().agenerate(messages, stop)
+
+    def get_num_tokens(self, text: str) -> int:
+        return 500
+    
+    def get_num_tokens_from_messages(self, messages: List[BaseMessage]) -> int:
+        return 500

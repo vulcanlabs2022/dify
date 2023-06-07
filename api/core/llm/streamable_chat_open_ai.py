@@ -7,6 +7,9 @@ from typing import Optional, List, Dict, Any
 from pydantic import root_validator
 
 from core.llm.error_handle_wraps import handle_llm_exceptions, handle_llm_exceptions_async
+import tiktoken
+
+encoding = tiktoken.get_encoding("cl100k_base")
 
 
 class StreamableChatOpenAI(ChatOpenAI):
@@ -126,7 +129,11 @@ class StreamableChatOpenAI(ChatOpenAI):
         return await super().agenerate(messages, stop)
 
     def get_num_tokens(self, text: str) -> int:
-        return 500
-    
+        tokens = encoding.encode(text)
+        return len(tokens)
+
     def get_num_tokens_from_messages(self, messages: List[BaseMessage]) -> int:
-        return 500
+        total = 0
+        for message in messages:
+            total += self.get_num_tokens(message.content)
+        return total

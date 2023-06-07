@@ -35,9 +35,14 @@ class Completion:
         errors: ProviderTokenNotInitError
         """
         cls.validate_query_tokens(app.tenant_id, app_model_config, query)
-
+        print("something to generate")
+        print("conversation", conversation)
+        logging.info("something to generate")
+        if app_model_config:
+            logging.info(f'appmodelconfig:{app_model_config.__dict__}')
         memory = None
         if conversation:
+            logging.info(f'conversation: {conversation.__dict__}')
             # get memory of conversation (read-only)
             memory = cls.get_memory_from_conversation(
                 tenant_id=app.tenant_id,
@@ -45,8 +50,8 @@ class Completion:
                 conversation=conversation,
                 return_messages=False
             )
-
             inputs = conversation.inputs
+            logging.info(f'conversation inputs: {conversation.inputs}')
 
         conversation_message_task = ConversationMessageTask(
             task_id=task_id,
@@ -64,14 +69,15 @@ class Completion:
         main_chain = MainChainBuilder.to_langchain_components(
             tenant_id=app.tenant_id,
             agent_mode=app_model_config.agent_mode_dict,
-            memory=ReadOnlyConversationTokenDBStringBufferSharedMemory(memory=memory) if memory else None,
+            memory=ReadOnlyConversationTokenDBStringBufferSharedMemory(
+                memory=memory) if memory else None,
             conversation_message_task=conversation_message_task
         )
 
         chain_output = ''
         if main_chain:
             chain_output = main_chain.run(query)
-
+        logging.info(f'chain output {chain_output}')
         # run the final llm
         try:
             cls.run_final_llm(
@@ -115,14 +121,15 @@ class Completion:
             memory=memory
         )
 
-        final_llm.callback_manager = cls.get_llm_callback_manager(final_llm, streaming, conversation_message_task)
+        final_llm.callback_manager = cls.get_llm_callback_manager(
+            final_llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=final_llm,
             prompt=prompt,
             mode=mode
         )
-
+        logging.info(f'run final llm generate prompt {prompt}')
         response = final_llm.generate([prompt], stop_words)
 
         return response
@@ -133,13 +140,15 @@ class Completion:
                             memory: Optional[ReadOnlyConversationTokenDBBufferSharedMemory]) -> \
             Tuple[Union[str | List[BaseMessage]], Optional[List[str]]]:
         # disable template string in query
-        query_params = OutLinePromptTemplate.from_template(template=query).input_variables
+        query_params = OutLinePromptTemplate.from_template(
+            template=query).input_variables
         if query_params:
             for query_param in query_params:
                 if query_param not in inputs:
                     inputs[query_param] = '{' + query_param + '}'
 
-        pre_prompt = PromptBuilder.process_template(pre_prompt) if pre_prompt else pre_prompt
+        pre_prompt = PromptBuilder.process_template(
+            pre_prompt) if pre_prompt else pre_prompt
         if mode == 'completion':
             prompt_template = OutLinePromptTemplate.from_template(
                 template=("""Use the following CONTEXT as your learned knowledge:
@@ -159,13 +168,15 @@ And answer according to the language of the user's question.
 
             if chain_output:
                 inputs['context'] = chain_output
-                context_params = OutLinePromptTemplate.from_template(template=chain_output).input_variables
+                context_params = OutLinePromptTemplate.from_template(
+                    template=chain_output).input_variables
                 if context_params:
                     for context_param in context_params:
                         if context_param not in inputs:
                             inputs[context_param] = '{' + context_param + '}'
 
-            prompt_inputs = {k: inputs[k] for k in prompt_template.input_variables if k in inputs}
+            prompt_inputs = {
+                k: inputs[k] for k in prompt_template.input_variables if k in inputs}
             prompt_content = prompt_template.format(
                 query=query,
                 **prompt_inputs
@@ -187,7 +198,8 @@ And answer according to the language of the user's question.
 
             if pre_prompt:
                 pre_prompt_inputs = {k: inputs[k] for k in
-                                     OutLinePromptTemplate.from_template(template=pre_prompt).input_variables
+                                     OutLinePromptTemplate.from_template(
+                                         template=pre_prompt).input_variables
                                      if k in inputs}
 
                 if pre_prompt_inputs:
@@ -219,18 +231,22 @@ And answer according to the language of the user's question.
                     inputs=human_inputs
                 )
 
-                curr_message_tokens = memory.llm.get_messages_tokens([tmp_human_message])
+                curr_message_tokens = memory.llm.get_messages_tokens(
+                    [tmp_human_message])
                 rest_tokens = llm_constant.max_context_token_length[memory.llm.model_name] \
-                              - memory.llm.max_tokens - curr_message_tokens
+                    - memory.llm.max_tokens - curr_message_tokens
                 rest_tokens = max(rest_tokens, 0)
-                histories = cls.get_history_messages_from_memory(memory, rest_tokens)
-
+                histories = cls.get_history_messages_from_memory(
+                    memory, rest_tokens)
+                logging.info(f'histories: {histories}')
                 # disable template string in query
-                histories_params = OutLinePromptTemplate.from_template(template=histories).input_variables
+                histories_params = OutLinePromptTemplate.from_template(
+                    template=histories).input_variables
                 if histories_params:
                     for histories_param in histories_params:
                         if histories_param not in human_inputs:
-                            human_inputs[histories_param] = '{' + histories_param + '}'
+                            human_inputs[histories_param] = '{' + \
+                                histories_param + '}'
 
                 human_message_prompt += "\n\n" + histories
 
@@ -250,11 +266,14 @@ And answer according to the language of the user's question.
     def get_llm_callback_manager(cls, llm: Union[StreamableOpenAI, StreamableChatOpenAI],
                                  streaming: bool,
                                  conversation_message_task: ConversationMessageTask) -> CallbackManager:
-        llm_callback_handler = LLMCallbackHandler(llm, conversation_message_task)
+        llm_callback_handler = LLMCallbackHandler(
+            llm, conversation_message_task)
         if streaming:
-            callback_handlers = [llm_callback_handler, DifyStreamingStdOutCallbackHandler()]
+            callback_handlers = [llm_callback_handler,
+                                 DifyStreamingStdOutCallbackHandler()]
         else:
-            callback_handlers = [llm_callback_handler, DifyStdOutCallbackHandler()]
+            callback_handlers = [llm_callback_handler,
+                                 DifyStdOutCallbackHandler()]
 
         return CallbackManager(callback_handlers)
 
@@ -344,7 +363,8 @@ And answer according to the language of the user's question.
         original_completion = message.answer.strip()
 
         prompt = MORE_LIKE_THIS_GENERATE_PROMPT
-        prompt = prompt.format(prompt=original_prompt, original_completion=original_completion)
+        prompt = prompt.format(prompt=original_prompt,
+                               original_completion=original_completion)
 
         if isinstance(llm, BaseChatModel):
             prompt = [HumanMessage(content=prompt)]
@@ -360,7 +380,8 @@ And answer according to the language of the user's question.
             streaming=streaming
         )
 
-        llm.callback_manager = cls.get_llm_callback_manager(llm, streaming, conversation_message_task)
+        llm.callback_manager = cls.get_llm_callback_manager(
+            llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=llm,

@@ -7,6 +7,7 @@ from core.llm.streamable_chat_open_ai import StreamableChatOpenAI
 from core.llm.streamable_open_ai import StreamableOpenAI
 from extensions.ext_database import db
 from models.model import Conversation, Message
+import logging
 
 
 class ReadOnlyConversationTokenDBBufferSharedMemory(BaseChatMemory):
@@ -26,9 +27,9 @@ class ReadOnlyConversationTokenDBBufferSharedMemory(BaseChatMemory):
             Message.conversation_id == self.conversation.id,
             Message.answer_tokens > 0
         ).order_by(Message.created_at.desc()).limit(self.message_limit).all()
-
+        logging.info(f"conversation id {self.conversation.id}")
         messages = list(reversed(messages))
-
+        logging.info(f"buffer messages {messages}")
         chat_messages: List[BaseMessage] = []
         for message in messages:
             chat_messages.append(HumanMessage(content=message.query))
@@ -36,15 +37,21 @@ class ReadOnlyConversationTokenDBBufferSharedMemory(BaseChatMemory):
 
         if not chat_messages:
             return chat_messages
-
+        logging.info(f"before prune chat_messages {chat_messages}")
         # prune the chat message if it exceeds the max token limit
         curr_buffer_length = self.llm.get_messages_tokens(chat_messages)
+        logging.info(f"curr_buffer_length {curr_buffer_length}")
+        logging.info(f"max token limit {self.max_token_limit}")
         if curr_buffer_length > self.max_token_limit:
             pruned_memory = []
+            logging.info(f"pruned_memory {pruned_memory}")
             while curr_buffer_length > self.max_token_limit and chat_messages:
+                logging.info(f"curr_buffer_length {curr_buffer_length}")
                 pruned_memory.append(chat_messages.pop(0))
-                curr_buffer_length = self.llm.get_messages_tokens(chat_messages)
-
+                logging.info(f"pruned_memory {pruned_memory}")
+                curr_buffer_length = self.llm.get_messages_tokens(
+                    chat_messages)
+        logging.info(f"after prune chat_messages {chat_messages}")
         return chat_messages
 
     @property

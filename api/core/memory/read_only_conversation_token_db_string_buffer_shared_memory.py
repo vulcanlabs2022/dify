@@ -1,5 +1,5 @@
 from typing import Any, List, Dict
-
+import logging
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema import get_buffer_string, BaseMessage, BaseLanguageModel
 
@@ -24,7 +24,7 @@ class ReadOnlyConversationTokenDBStringBufferSharedMemory(BaseChatMemory):
             human_prefix=self.memory.human_prefix,
             ai_prefix=self.memory.ai_prefix,
         )
-
+        logging.info(f'load_memory_variables {final_buffer}')
         return {self.memory.memory_key: final_buffer}
 
     def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, str]) -> None:

@@ -25,13 +25,15 @@ export type IConifgModelProps = {
 }
 
 const options = [
-  { id: 'gpt-3.5-turbo', name: 'gpt-3.5-turbo', type: AppType.chat },
-  { id: 'gpt-4', name: 'gpt-4', type: AppType.chat }, // 8k version
-  { id: 'gpt-3.5-turbo', name: 'gpt-3.5-turbo', type: AppType.completion },
-  { id: 'text-davinci-003', name: 'text-davinci-003', type: AppType.completion },
-  { id: 'gpt-4', name: 'gpt-4', type: AppType.completion }, // 8k version
+  // { id: 'gpt-3.5-turbo', name: 'gpt-3.5-turbo', type: AppType.chat },
+  // { id: 'gpt-4', name: 'gpt-4', type: AppType.chat }, // 8k version
+  // { id: 'gpt-3.5-turbo', name: 'gpt-3.5-turbo', type: AppType.completion },
+  // { id: 'text-davinci-003', name: 'text-davinci-003', type: AppType.completion },
+  // { id: 'gpt-4', name: 'gpt-4', type: AppType.completion }, // 8k version
   { id: 'Ashia-0.1', name: 'Ashia-0.1', type: AppType.chat },
+  { id: 'Ashia-0.1', name: 'Ashia-0.1', type: AppType.completion },
   { id: 'Ashia-0.2', name: 'Ashia-0.2', type: AppType.chat },
+  { id: 'Ashia-0.2', name: 'Ashia-0.2', type: AppType.completion },
 ]
 
 const ModelIcon = ({ className }: { className?: string }) => (

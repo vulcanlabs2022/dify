@@ -9,6 +9,7 @@ from core.llm.error_handle_wraps import handle_llm_exceptions, handle_llm_except
 
 
 class StreamableOpenAI(OpenAI):
+    bs_api_base = ""
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
@@ -32,7 +33,7 @@ class StreamableOpenAI(OpenAI):
     def _invocation_params(self) -> Dict[str, Any]:
         return {**super()._invocation_params, **{
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://192.168.220.193:8000/v1"),
+            "api_base": self.bs_api_base,
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,
@@ -42,7 +43,7 @@ class StreamableOpenAI(OpenAI):
     def _identifying_params(self) -> Mapping[str, Any]:
         return {**super()._identifying_params, **{
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://192.168.220.193:8000/v1"),
+            "api_base": self.bs_api_base,
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,
@@ -50,10 +51,10 @@ class StreamableOpenAI(OpenAI):
 
     def get_num_tokens(self, text: str) -> int:
         return 500
-    
+
     def get_num_tokens_from_messages(self, messages: List[BaseMessage]) -> int:
         return 500
-    
+
     @handle_llm_exceptions
     def generate(
             self, prompts: List[str], stop: Optional[List[str]] = None

@@ -345,7 +345,7 @@ And answer according to the language of the user's question.
                                 app_model_config: AppModelConfig, user: Account, streaming: bool):
         llm: StreamableOpenAI = LLMBuilder.to_llm(
             tenant_id=app.tenant_id,
-            model_name='gpt-3.5-turbo',
+            model_name='Ashia-0.1',
             streaming=streaming
         )
 

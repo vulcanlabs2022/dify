@@ -99,6 +99,9 @@ services:
       SENTRY_TRACES_SAMPLE_RATE: 1.0
       # The sample rate for Sentry profiles. Default: `1.0`
       SENTRY_PROFILES_SAMPLE_RATE: 1.0
+      Ashia-0.1API_BASE: 
+      Ashia-0.2API_BASE: 
+      text-davinci-003API_BASE: 
     depends_on:
       - db
       - redis
@@ -156,7 +159,7 @@ services:
 
   # Frontend web application.
   web:
-    image: calehh/dify-web:v0.1
+    image: calehh/dify-web:v0.2
     restart: always
     environment:
       EDITION: SELF_HOSTED

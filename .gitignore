@@ -148,3 +148,4 @@ sdks/python-client/dist
 sdks/python-client/dify_client.egg-info
 
 .vscode/
+docker-compose-example.yaml

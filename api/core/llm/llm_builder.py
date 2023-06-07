@@ -12,6 +12,8 @@ from core.llm.streamable_azure_open_ai import StreamableAzureOpenAI
 from core.llm.streamable_chat_open_ai import StreamableChatOpenAI
 from core.llm.streamable_open_ai import StreamableOpenAI
 from models.provider import ProviderType
+import logging
+import os
 
 
 class LLMBuilder:
@@ -35,10 +37,12 @@ class LLMBuilder:
     def to_llm(cls, tenant_id: str, model_name: str, **kwargs) -> Union[StreamableOpenAI, StreamableChatOpenAI, FakeListLLM]:
         if model_name == 'fake':
             return FakeListLLM(responses=[])
-
+        logging.info(f"to llm model_name {model_name}")
         # provider = cls.get_default_provider(tenant_id)
         provider = 'openai'
         mode = cls.get_mode_by_model(model_name)
+        api_base = cls.get_api_base_by_model(model_name)
+        logging.info(f"api base {api_base}")
         if mode == 'chat':
             if provider == 'openai':
                 llm_cls = StreamableChatOpenAI
@@ -52,10 +56,12 @@ class LLMBuilder:
         else:
             raise ValueError(f"model name {model_name} is not supported.")
 
-        model_credentials = cls.get_model_credentials(tenant_id, provider, model_name)
+        model_credentials = cls.get_model_credentials(
+            tenant_id, provider, model_name)
 
         model_name = 'openai'
         return llm_cls(
+            bs_api_base=api_base,
             model_name=model_name,
             temperature=kwargs.get('temperature', 0),
             max_tokens=kwargs.get('max_tokens', 256),
@@ -87,6 +93,14 @@ class LLMBuilder:
         )
 
     @classmethod
+    def get_api_base_by_model(cls, model_name: str) -> str:
+        if not model_name:
+            raise ValueError(f"empty model name is not supported.")
+        key = "%sAPI_BASE" % model_name
+        return os.environ.get(
+            key)
+
+    @classmethod
     def get_mode_by_model(cls, model_name: str) -> str:
         if not model_name:
             raise ValueError(f"empty model name is not supported.")
@@ -112,7 +126,8 @@ class LLMBuilder:
 
         # model_provider = llm_constant.models[model_name]
 
-        provider_service = LLMProviderService(tenant_id=tenant_id, provider_name=model_provider)
+        provider_service = LLMProviderService(
+            tenant_id=tenant_id, provider_name=model_provider)
         return provider_service.get_credentials(model_name)
 
     @classmethod

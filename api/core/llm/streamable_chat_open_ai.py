@@ -13,6 +13,7 @@ encoding = tiktoken.get_encoding("cl100k_base")
 
 
 class StreamableChatOpenAI(ChatOpenAI):
+    bs_api_base = ""
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
@@ -44,7 +45,7 @@ class StreamableChatOpenAI(ChatOpenAI):
         return {
             **super()._default_params,
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "http://192.168.220.193:8000/v1"),
+            "api_base": self.bs_api_base,
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,

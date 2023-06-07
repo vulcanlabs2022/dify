@@ -84,7 +84,7 @@ class MultiDatasetRouterChain(Chain):
         llm_callback_manager = CallbackManager([DifyStdOutCallbackHandler()])
         llm = LLMBuilder.to_llm(
             tenant_id=tenant_id,
-            model_name='gpt-3.5-turbo',
+            model_name='Ashia-0.1',
             temperature=0,
             max_tokens=1024,
             callback_manager=llm_callback_manager

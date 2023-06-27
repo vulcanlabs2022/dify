@@ -2,7 +2,7 @@ version: '3.1'
 services:
   # API service
   api:
-    image: calehh/dify-api:latest
+    image: calehh/dify-api:v0.16
     restart: always
     environment:
       # Startup mode, 'api' starts the API server.
@@ -113,7 +113,7 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: calehh/dify-api:latest
+    image: calehh/dify-api:v0.16
     restart: always
     environment:
       # Startup mode, 'worker' starts the Celery worker for processing the queue.

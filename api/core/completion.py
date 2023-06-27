@@ -1,10 +1,11 @@
 import logging
 from typing import Optional, List, Union, Tuple
+from langchain import PromptTemplate
 
 from langchain.callbacks import CallbackManager
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
-from langchain.schema import BaseMessage, BaseLanguageModel, HumanMessage
+from langchain.schema import BaseMessage, BaseLanguageModel, HumanMessage, SystemMessage, AIMessage
 from requests.exceptions import ChunkedEncodingError
 
 from core.constant import llm_constant
@@ -221,45 +222,19 @@ And answer according to the language of the user's question.
 
             if pre_prompt:
                 human_message_prompt += pre_prompt
-
-            query_prompt = "\nHuman: {query}\nAI: "
-
+                systemMsg = SystemMessage(
+                    content=pre_prompt, additional_kwargs=human_inputs)
+                Completion.__formatMessage(systemMsg)
+                messages.append(systemMsg)
+            new_query = HumanMessage(
+                content=query, additional_kwargs=human_inputs)
+            Completion.__formatMessage(new_query)
             if memory:
-                # append chat histories
-                tmp_human_message = PromptBuilder.to_human_message(
-                    prompt_content=human_message_prompt + query_prompt,
-                    inputs=human_inputs
-                )
-
-                curr_message_tokens = memory.llm.get_messages_tokens(
-                    [tmp_human_message])
-                rest_tokens = llm_constant.max_context_token_length[memory.llm.model_name] \
-                    - memory.llm.max_tokens - curr_message_tokens
-                rest_tokens = max(rest_tokens, 0)
-                histories = cls.get_history_messages_from_memory(
-                    memory, rest_tokens)
-                logging.info(f'histories: {histories}')
-                # disable template string in query
-                histories_params = OutLinePromptTemplate.from_template(
-                    template=histories).input_variables
-                if histories_params:
-                    for histories_param in histories_params:
-                        if histories_param not in human_inputs:
-                            human_inputs[histories_param] = '{' + \
-                                histories_param + '}'
-
-                human_message_prompt += "\n\n" + histories
-
-            human_message_prompt += query_prompt
-
-            # construct main prompt
-            human_message = PromptBuilder.to_human_message(
-                prompt_content=human_message_prompt,
-                inputs=human_inputs
-            )
-
-            messages.append(human_message)
-
+                history_messages = memory.buffer
+                for msg in history_messages:
+                    Completion.__formatMessage(msg)
+                    messages.append(msg)
+            messages.append(new_query)
             return messages, ['\nHuman:']
 
     @classmethod
@@ -390,3 +365,10 @@ And answer according to the language of the user's question.
         )
 
         llm.generate([prompt])
+
+    def __formatMessage(message: BaseMessage):
+        promptTemplate = PromptTemplate.from_template(
+            message.content)
+        filetered_inputs = {key: message.additional_kwargs[key] for key in message.additional_kwargs.keys(
+        ) if key in promptTemplate.input_variables}
+        message.content = promptTemplate.format(**filetered_inputs)

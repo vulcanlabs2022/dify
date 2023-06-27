@@ -26,8 +26,8 @@ max_context_token_length = {
     'text-ada-001': 2049,
     'text-embedding-ada-002': 8191,
     'openai': 2048,
-    'Ashia-0.1': 2048,
-    'Ashia-0.2': 2048,
+    'Ashia-0.1': 204800,
+    'Ashia-0.2': 204800,
 }
 
 models_by_mode = {

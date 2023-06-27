@@ -20,52 +20,63 @@ generate_base_model = 'text-davinci-003'
 class LLMGenerator:
     @classmethod
     def generate_conversation_name(cls, tenant_id: str, query, answer):
-        prompt = CONVERSATION_TITLE_PROMPT
-        prompt = prompt.format(query=query, answer=answer)
-        llm: StreamableOpenAI = LLMBuilder.to_llm(
-            tenant_id=tenant_id,
-            model_name=generate_base_model,
-            max_tokens=50
-        )
+        # prompt = CONVERSATION_TITLE_PROMPT
+        # prompt = prompt.format(query=query, answer=answer)
+        # llm: StreamableOpenAI = LLMBuilder.to_llm(
+        #     tenant_id=tenant_id,
+        #     model_name=generate_base_model,
+        #     max_tokens=50
+        # )
 
-        if isinstance(llm, BaseChatModel):
-            prompt = [HumanMessage(content=prompt)]
+        # if isinstance(llm, BaseChatModel):
+        #     prompt = [HumanMessage(content=prompt)]
 
-        response = llm.generate([prompt])
-        answer = response.generations[0][0].text
+        # response = llm.generate([prompt])
+        # answer = response.generations[0][0].text
+        # return answer.strip()
+        answer = f'{query:.20}{"..." if len(query) > 20 else ""}'
+        logging.info(f"generate name:{answer.strip()}")
         return answer.strip()
 
+    # chunk first query message
     @classmethod
     def generate_conversation_summary(cls, tenant_id: str, messages):
-        max_tokens = 200
+        # max_tokens = 200
 
-        prompt = CONVERSATION_SUMMARY_PROMPT
-        prompt_with_empty_context = prompt.format(context='')
-        prompt_tokens = TokenCalculator.get_num_tokens(generate_base_model, prompt_with_empty_context)
-        rest_tokens = llm_constant.max_context_token_length[generate_base_model] - prompt_tokens - max_tokens
+        # prompt = CONVERSATION_SUMMARY_PROMPT
+        # prompt_with_empty_context = prompt.format(context='')
+        # prompt_tokens = TokenCalculator.get_num_tokens(
+        #     generate_base_model, prompt_with_empty_context)
+        # rest_tokens = llm_constant.max_context_token_length[generate_base_model] - \
+        #     prompt_tokens - max_tokens
 
-        context = ''
-        for message in messages:
-            if not message.answer:
-                continue
+        # context = ''
+        # for message in messages:
+        #     if not message.answer:
+        #         continue
 
-            message_qa_text = "Human:" + message.query + "\nAI:" + message.answer + "\n"
-            if rest_tokens - TokenCalculator.get_num_tokens(generate_base_model, context + message_qa_text) > 0:
-                context += message_qa_text
+        #     message_qa_text = "Human:" + message.query + "\nAI:" + message.answer + "\n"
+        #     if rest_tokens - TokenCalculator.get_num_tokens(generate_base_model, context + message_qa_text) > 0:
+        #         context += message_qa_text
 
-        prompt = prompt.format(context=context)
+        # prompt = prompt.format(context=context)
 
-        llm: StreamableOpenAI = LLMBuilder.to_llm(
-            tenant_id=tenant_id,
-            model_name=generate_base_model,
-            max_tokens=max_tokens
-        )
+        # llm: StreamableOpenAI = LLMBuilder.to_llm(
+        #     tenant_id=tenant_id,
+        #     model_name=generate_base_model,
+        #     max_tokens=max_tokens
+        # )
 
-        if isinstance(llm, BaseChatModel):
-            prompt = [HumanMessage(content=prompt)]
+        # if isinstance(llm, BaseChatModel):
+        #     prompt = [HumanMessage(content=prompt)]
 
-        response = llm.generate([prompt])
-        answer = response.generations[0][0].text
+        # response = llm.generate([prompt])
+        # answer = response.generations[0][0].text
+        if len(messages) == 0:
+            return "new conversation"
+        first_query = messages[0].query
+        answer = f'{first_query:.50}{"..." if len(first_query) > 50 else ""}'
+        logging.info(f"generate summary:{answer.strip()}")
         return answer.strip()
 
     @classmethod
@@ -114,7 +125,8 @@ class LLMGenerator:
             output = llm(query)
             questions = output_parser.parse(output)
         except Exception:
-            logging.exception("Error generating suggested questions after answer")
+            logging.exception(
+                "Error generating suggested questions after answer")
             questions = []
 
         return questions

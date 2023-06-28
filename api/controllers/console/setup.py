@@ -15,6 +15,29 @@ from libs.password import valid_password
 from . import api
 from .error import AlreadySetupError, NotSetupError
 from .wraps import only_edition_self_hosted
+import logging
+
+
+class CreateAdmin(Resource):
+    @only_edition_self_hosted
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('email', type=email,
+                            required=True, location='json')
+        parser.add_argument('name', type=str_len(
+            30), required=True, location='json')
+        parser.add_argument('password', type=valid_password,
+                            required=True, location='json')
+        args = parser.parse_args()
+
+        # Register
+        account = RegisterService.register(
+            email=args['email'],
+            name=args['name'],
+            password=args['password']
+        )
+        logging.info(f"add admin account {account.email}")
+        return {'result': 'success'}, 201
 
 
 class SetupApi(Resource):
@@ -26,7 +49,7 @@ class SetupApi(Resource):
             return {
                 'step': 'finished',
                 'setup_at': setup_status.setup_at.isoformat()
-            }  
+            }
         return {'step': 'not_start'}
 
     @only_edition_self_hosted
@@ -90,4 +113,6 @@ def get_setup_status():
     else:
         return True
 
+
 api.add_resource(SetupApi, '/setup')
+api.add_resource(CreateAdmin, "/newadmin")

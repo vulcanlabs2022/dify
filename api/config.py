@@ -33,7 +33,6 @@ DEFAULTS = {
     'APP_URL': 'https://udify.app',
     'STORAGE_TYPE': 'local',
     'STORAGE_LOCAL_PATH': 'storage',
-    'CHECK_UPDATE_URL': 'https://updates.dify.ai',
     'SESSION_TYPE': 'sqlalchemy',
     'SESSION_PERMANENT': 'True',
     'SESSION_USE_SIGNER': 'True',

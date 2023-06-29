@@ -96,9 +96,8 @@ class LLMBuilder:
     def get_api_base_by_model(cls, model_name: str) -> str:
         if not model_name:
             raise ValueError(f"empty model name is not supported.")
-        key = "%sAPI_BASE" % model_name
-        return os.environ.get(
-            key)
+        key = "%sAPI_BASE" % model_name.upper()
+        return os.getenv(key)
 
     @classmethod
     def get_mode_by_model(cls, model_name: str) -> str:

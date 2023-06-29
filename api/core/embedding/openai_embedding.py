@@ -7,6 +7,8 @@ from llama_index.embeddings.openai import OpenAIEmbeddingMode, OpenAIEmbeddingMo
 from tenacity import wait_random_exponential, retry, stop_after_attempt
 
 from core.llm.error_handle_wraps import handle_llm_exceptions, handle_llm_exceptions_async
+import os
+import logging
 
 
 @retry(reraise=True, wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
@@ -31,7 +33,7 @@ def get_embedding(
 
 @retry(reraise=True, wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
 async def aget_embedding(text: str, engine: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> List[
-    float]:
+        float]:
     """Asynchronously get embedding.
 
     NOTE: Copied from OpenAI's embedding utils:
@@ -65,13 +67,15 @@ def get_embeddings(
     like matplotlib, plotly, scipy, sklearn.
 
     """
-    assert len(list_of_text) <= 2048, "The batch size should not be larger than 2048."
+    assert len(
+        list_of_text) <= 2048, "The batch size should not be larger than 2048."
 
     # replace newlines, which can negatively affect performance.
     list_of_text = [text.replace("\n", " ") for text in list_of_text]
-
-    data = openai.Embedding.create(input=list_of_text, engine=engine, api_key=api_key, **kwargs).data
-    data = sorted(data, key=lambda x: x["index"])  # maintain the same order as input.
+    data = openai.Embedding.create(
+        input=list_of_text, engine=engine, api_key=api_key, **kwargs).data
+    # maintain the same order as input.
+    data = sorted(data, key=lambda x: x["index"])
     return [d["embedding"] for d in data]
 
 
@@ -88,13 +92,15 @@ async def aget_embeddings(
     like matplotlib, plotly, scipy, sklearn.
 
     """
-    assert len(list_of_text) <= 2048, "The batch size should not be larger than 2048."
+    assert len(
+        list_of_text) <= 2048, "The batch size should not be larger than 2048."
 
     # replace newlines, which can negatively affect performance.
     list_of_text = [text.replace("\n", " ") for text in list_of_text]
 
     data = (await openai.Embedding.acreate(input=list_of_text, engine=engine, api_key=api_key, **kwargs)).data
-    data = sorted(data, key=lambda x: x["index"])  # maintain the same order as input.
+    # maintain the same order as input.
+    data = sorted(data, key=lambda x: x["index"])
     return [d["embedding"] for d in data]
 
 
@@ -124,7 +130,8 @@ class OpenAIEmbedding(BaseEmbedding):
         self.openai_api_key = openai_api_key
         self.openai_api_type = kwargs.get('openai_api_type')
         self.openai_api_version = kwargs.get('openai_api_version')
-        self.openai_api_base = kwargs.get('openai_api_base')
+        # self.openai_api_base = kwargs.get('openai_api_base')
+        self.openai_api_base = self.get_api_base_by_model('EMBEDDING')
 
     @handle_llm_exceptions
     def _get_query_embedding(self, query: str) -> List[float]:
@@ -212,3 +219,10 @@ class OpenAIEmbedding(BaseEmbedding):
                                            api_type=self.openai_api_type, api_version=self.openai_api_version,
                                            api_base=self.openai_api_base)
         return embeddings
+
+    @classmethod
+    def get_api_base_by_model(cls, model_name: str) -> str:
+        if not model_name:
+            raise ValueError(f"empty model name is not supported.")
+        key = "%sAPI_BASE" % model_name.upper()
+        return os.getenv(key)

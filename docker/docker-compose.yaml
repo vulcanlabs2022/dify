@@ -2,7 +2,7 @@ version: '3.1'
 services:
   # API service
   api:
-    image: calehh/dify-api:v0.16
+    image: calehh/dify-api:v0.16_alpha
     restart: always
     environment:
       # Startup mode, 'api' starts the API server.
@@ -99,9 +99,11 @@ services:
       SENTRY_TRACES_SAMPLE_RATE: 1.0
       # The sample rate for Sentry profiles. Default: `1.0`
       SENTRY_PROFILES_SAMPLE_RATE: 1.0
-      Ashia-0.1API_BASE: 
-      Ashia-0.2API_BASE: 
-      text-davinci-003API_BASE: 
+      ASHIA-0.1API_BASE: 'http://localhost:6661/ashia1'
+      ASHIA-0.2API_BASE: 'http://localhost:6661/ashia2'
+      TEXT-DAVINCI-003API_BASE: 'http://localhost:6661/davinci'
+      EMBEDDINGAPI_BASE: 'http://localhost:6661/embedding'
+      DISABLE_PROVIDER_CONFIG_VALIDATION: true
     depends_on:
       - db
       - redis
@@ -113,7 +115,7 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: calehh/dify-api:v0.16
+    image: calehh/dify-api:v0.16_alpha
     restart: always
     environment:
       # Startup mode, 'worker' starts the Celery worker for processing the queue.
@@ -149,6 +151,10 @@ services:
       VECTOR_STORE: weaviate
       WEAVIATE_ENDPOINT: http://weaviate:8080
       WEAVIATE_API_KEY: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
+      ASHIA-0.1API_BASE: 'http://localhost/ashia1'
+      ASHIA-0.2API_BASE: 'http://localhost/ashia2'
+      TEXT-DAVINCI-003API_BASE: 'http://localhost/davinci'
+      EMBEDDINGAPI_BASE: 'http://localhost/embedding'
     depends_on:
       - db
       - redis

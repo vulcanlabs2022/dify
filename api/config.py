@@ -28,9 +28,9 @@ DEFAULTS = {
     'SESSION_REDIS_USE_SSL': 'False',
     'OAUTH_REDIRECT_PATH': '/console/api/oauth/authorize',
     'OAUTH_REDIRECT_INDEX_PATH': '/',
-    'CONSOLE_URL': 'https://cloud.dify.ai',
-    'API_URL': 'https://api.dify.ai',
-    'APP_URL': 'https://udify.app',
+    'CONSOLE_URL': '',
+    'API_URL': '',
+    'APP_URL': '',
     'STORAGE_TYPE': 'local',
     'STORAGE_LOCAL_PATH': 'storage',
     'SESSION_TYPE': 'sqlalchemy',
@@ -45,7 +45,7 @@ DEFAULTS = {
     'CELERY_BACKEND': 'database',
     'PDF_PREVIEW': 'True',
     'LOG_LEVEL': 'INFO',
-    'DISABLE_PROVIDER_CONFIG_VALIDATION': 'False',
+    'DISABLE_PROVIDER_CONFIG_VALIDATION': 'True',
     'DEFAULT_LLM_PROVIDER': 'openai'
 }
 

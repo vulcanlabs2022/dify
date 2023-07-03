@@ -208,22 +208,32 @@ And answer according to the language of the user's question.
 
             if chain_output:
                 human_inputs['context'] = chain_output
-                human_message_prompt += """Use the following CONTEXT as your learned knowledge.
-[CONTEXT]
-{context}
-[END CONTEXT]
+#                 human_message_prompt += """Use the following CONTEXT as your learned knowledge.
+# [CONTEXT]
+# {context}
+# [END CONTEXT]
 
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification. 
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
+# When answer to user:
+# - If you don't know, just say that you don't know.
+# - If you don't know when you are not sure, ask for clarification.
+# Avoid mentioning that you obtained the information from the context.
+# And answer according to the language of the user's question.
+# """
+
+                human_message_prompt += """将下面文本作为知识进行学习，帮助你回答用户的问题
+[文本开始]
+{context}
+[文本结束]
+当你回答用户问题时需要注意：
+- 如果你不知道，就回复“抱歉，我不知道”。
+- 如果你不确定答案是否正确，请用户进行确认。
+ 
 """
 
-            if pre_prompt:
+            if pre_prompt is not None or chain_output is not None:
                 human_message_prompt += pre_prompt
                 systemMsg = SystemMessage(
-                    content=pre_prompt, additional_kwargs=human_inputs)
+                    content=human_message_prompt, additional_kwargs=human_inputs)
                 Completion.__formatMessage(systemMsg)
                 messages.append(systemMsg)
             new_query = HumanMessage(

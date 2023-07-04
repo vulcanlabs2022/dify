@@ -150,19 +150,19 @@ class Completion:
 
         pre_prompt = PromptBuilder.process_template(
             pre_prompt) if pre_prompt else pre_prompt
+        completion_prompt = """将下面文本作为你的已经学习的知识:
+[文本开始]
+{context}
+[文本结束]
+
+当你回答用户问题时需要注意：
+- 如果你不知道，就回复“抱歉，我不知道”。
+- 如果你不确定答案是否正确，请用户进行确认。
+
+"""
         if mode == 'completion':
             prompt_template = OutLinePromptTemplate.from_template(
-                template=("""Use the following CONTEXT as your learned knowledge:
-[CONTEXT]
-{context}
-[END CONTEXT]
-
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification. 
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
-""" if chain_output else "")
+                template=(completion_prompt if chain_output else "")
                          + (pre_prompt + "\n" if pre_prompt else "")
                          + "{query}\n"
             )

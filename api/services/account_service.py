@@ -7,6 +7,9 @@ from typing import Optional
 
 from flask import session
 from sqlalchemy import func
+from api.models.provider import ProviderType
+from api.services.provider_service import ProviderService
+from models.provider import Provider
 
 from events.tenant_event import tenant_was_created
 from services.errors.account import AccountLoginError, CurrentPasswordIncorrectError, LinkAccountIntegrateError, \
@@ -50,7 +53,8 @@ class AccountService:
         """update account password"""
         # todo: split validation and update
         if account.password and not compare_password(password, account.password, account.password_salt):
-            raise CurrentPasswordIncorrectError("Current password is incorrect.")
+            raise CurrentPasswordIncorrectError(
+                "Current password is incorrect.")
         password_hashed = hash_password(new_password, account.password_salt)
         base64_password_hashed = base64.b64encode(password_hashed).decode()
         account.password = base64_password_hashed
@@ -110,9 +114,11 @@ class AccountService:
                 db.session.add(account_integrate)
 
             db.session.commit()
-            logging.info(f'Account {account.id} linked {provider} account {open_id}.')
+            logging.info(
+                f'Account {account.id} linked {provider} account {open_id}.')
         except Exception as e:
-            logging.exception(f'Failed to link {provider} account {open_id} to Account {account.id}')
+            logging.exception(
+                f'Failed to link {provider} account {open_id} to Account {account.id}')
             raise LinkAccountIntegrateError('Failed to link account.') from e
 
     @staticmethod
@@ -188,7 +194,8 @@ class TenantService:
         if not tenant:
             raise TenantNotFound("Tenant not found.")
 
-        ta = TenantAccountJoin.query.filter_by(tenant_id=tenant.id, account_id=account.id).first()
+        ta = TenantAccountJoin.query.filter_by(
+            tenant_id=tenant.id, account_id=account.id).first()
         if ta:
             tenant.role = ta.role
         else:
@@ -199,13 +206,16 @@ class TenantService:
     def switch_tenant(account: Account, tenant_id: int = None) -> None:
         """Switch the current workspace for the account"""
         if not tenant_id:
-            tenant_account_join = TenantAccountJoin.query.filter_by(account_id=account.id).first()
+            tenant_account_join = TenantAccountJoin.query.filter_by(
+                account_id=account.id).first()
         else:
-            tenant_account_join = TenantAccountJoin.query.filter_by(account_id=account.id, tenant_id=tenant_id).first()
+            tenant_account_join = TenantAccountJoin.query.filter_by(
+                account_id=account.id, tenant_id=tenant_id).first()
 
         # Check if the tenant exists and the account is a member of the tenant
         if not tenant_account_join:
-            raise AccountNotLinkTenantError("Tenant not found or account is not a member of the tenant.")
+            raise AccountNotLinkTenantError(
+                "Tenant not found or account is not a member of the tenant.")
 
         # Set the current tenant for the account
         account.current_tenant_id = tenant_account_join.tenant_id
@@ -287,7 +297,8 @@ class TenantService:
         if operator.id == account.id and TenantService.check_member_permission(tenant, operator, account, 'remove'):
             raise CannotOperateSelfError("Cannot operate self.")
 
-        ta = TenantAccountJoin.query.filter_by(tenant_id=tenant.id, account_id=account.id).first()
+        ta = TenantAccountJoin.query.filter_by(
+            tenant_id=tenant.id, account_id=account.id).first()
         if not ta:
             raise MemberNotInTenantError("Member not in tenant.")
 
@@ -297,7 +308,8 @@ class TenantService:
     @staticmethod
     def update_member_role(tenant: Tenant, member: Account, new_role: str, operator: Account) -> None:
         """Update member role"""
-        TenantService.check_member_permission(tenant, operator, member, 'update')
+        TenantService.check_member_permission(
+            tenant, operator, member, 'update')
 
         target_member_join = TenantAccountJoin.query.filter_by(
             tenant_id=tenant.id,
@@ -305,7 +317,8 @@ class TenantService:
         ).first()
 
         if target_member_join.role == new_role:
-            raise RoleAlreadyAssignedError("The provided role is already assigned to the member.")
+            raise RoleAlreadyAssignedError(
+                "The provided role is already assigned to the member.")
 
         if new_role == 'owner':
             # Find the current owner and change their role to 'admin'
@@ -324,7 +337,8 @@ class TenantService:
         """Dissolve tenant"""
         if not TenantService.check_member_permission(tenant, operator, operator, 'remove'):
             raise NoPermissionError('No permission to dissolve tenant.')
-        db.session.query(TenantAccountJoin).filter_by(tenant_id=tenant.id).delete()
+        db.session.query(TenantAccountJoin).filter_by(
+            tenant_id=tenant.id).delete()
         db.session.delete(tenant)
         db.session.commit()
 
@@ -341,12 +355,24 @@ class RegisterService:
             account.initialized_at = datetime.utcnow()
 
             if open_id is not None or provider is not None:
-                AccountService.link_account_integrate(provider, open_id, account)
+                AccountService.link_account_integrate(
+                    provider, open_id, account)
 
             tenant = TenantService.create_tenant(f"{account.name}'s Workspace")
 
             TenantService.create_tenant_member(tenant, account, role='owner')
             account.current_tenant = tenant
+            # add token
+            base64_encrypted_token = ProviderService.get_encrypted_token(
+                tenant=tenant,
+                provider_name="openai",
+                configs='aaabbbccc'
+            )
+            provider_model = Provider(tenant_id=tenant.id, provider_name=provider,
+                                      provider_type=ProviderType.CUSTOM.value,
+                                      encrypted_config=base64_encrypted_token,
+                                      is_valid=True)
+            db.session.add(provider_model)
 
             db.session.commit()
         except Exception as e:
@@ -370,7 +396,8 @@ class RegisterService:
             account.status = AccountStatus.PENDING.value
             db.session.commit()
         else:
-            TenantService.check_member_permission(tenant, inviter, account, 'add')
+            TenantService.check_member_permission(
+                tenant, inviter, account, 'add')
             ta = TenantAccountJoin.query.filter_by(
                 tenant_id=tenant.id,
                 account_id=account.id

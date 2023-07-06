@@ -7,9 +7,8 @@ from typing import Optional
 
 from flask import session
 from sqlalchemy import func
-from api.models.provider import ProviderType
-from api.services.provider_service import ProviderService
-from models.provider import Provider
+from services.provider_service import ProviderService
+from models.provider import Provider, ProviderType, ProviderName
 
 from events.tenant_event import tenant_was_created
 from services.errors.account import AccountLoginError, CurrentPasswordIncorrectError, LinkAccountIntegrateError, \
@@ -362,13 +361,14 @@ class RegisterService:
 
             TenantService.create_tenant_member(tenant, account, role='owner')
             account.current_tenant = tenant
+            
             # add token
             base64_encrypted_token = ProviderService.get_encrypted_token(
                 tenant=tenant,
-                provider_name="openai",
+                provider_name=ProviderName('openai'),
                 configs='aaabbbccc'
             )
-            provider_model = Provider(tenant_id=tenant.id, provider_name=provider,
+            provider_model = Provider(tenant_id=tenant.id, provider_name='openai',
                                       provider_type=ProviderType.CUSTOM.value,
                                       encrypted_config=base64_encrypted_token,
                                       is_valid=True)

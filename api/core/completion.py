@@ -231,7 +231,8 @@ class Completion:
 """
 
             if pre_prompt is not None or chain_output is not None:
-                human_message_prompt += pre_prompt
+                if pre_prompt is not None:
+                    human_message_prompt += pre_prompt
                 systemMsg = SystemMessage(
                     content=human_message_prompt, additional_kwargs=human_inputs)
                 Completion.__formatMessage(systemMsg)

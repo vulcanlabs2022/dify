@@ -17,11 +17,14 @@ class IndexBuilder:
 
             model_credentials = LLMBuilder.get_model_credentials(
                 tenant_id=dataset.tenant_id,
-                model_provider=LLMBuilder.get_default_provider(dataset.tenant_id),
-                model_name='text-embedding-ada-002'
+                model_provider=LLMBuilder.get_default_provider(
+                    dataset.tenant_id),
+                model_name='text-embedding-ada-002',
             )
 
             embeddings = CacheEmbedding(OpenAIEmbeddings(
+                openai_api_base=CacheEmbedding.get_api_base_by_model(
+                    'EMBEDDING'),
                 **model_credentials
             ))
 

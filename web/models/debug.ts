@@ -18,7 +18,7 @@ export type CompletionParams = {
   frequency_penalty: number
 }
 
-export type ModelId = 'gpt-3.5-turbo' | 'text-davinci-003'
+export type ModelId = 'Ashia-0.1' | 'text-davinci-003'
 
 export type PromptConfig = {
   prompt_template: string

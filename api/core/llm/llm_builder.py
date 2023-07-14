@@ -11,6 +11,8 @@ from core.llm.streamable_azure_open_ai import StreamableAzureOpenAI
 from core.llm.streamable_chat_open_ai import StreamableChatOpenAI
 from core.llm.streamable_open_ai import StreamableOpenAI
 from models.provider import ProviderType
+import logging
+import os
 
 
 class LLMBuilder:
@@ -32,11 +34,16 @@ class LLMBuilder:
 
     @classmethod
     def to_llm(cls, tenant_id: str, model_name: str, **kwargs) -> Union[StreamableOpenAI, StreamableChatOpenAI]:
-        provider = cls.get_default_provider(tenant_id)
+        provider = 'openai'
 
-        model_credentials = cls.get_model_credentials(tenant_id, provider, model_name)
+        model_credentials = cls.get_model_credentials(
+            tenant_id, provider, model_name)
 
         mode = cls.get_mode_by_model(model_name)
+
+        api_base = cls.get_api_base_by_model(model_name)
+        logging.info(f"api base {api_base}")
+
         if mode == 'chat':
             if provider == 'openai':
                 llm_cls = StreamableChatOpenAI
@@ -50,16 +57,18 @@ class LLMBuilder:
         else:
             raise ValueError(f"model name {model_name} is not supported.")
 
-
         model_kwargs = {
             'top_p': kwargs.get('top_p', 1),
             'frequency_penalty': kwargs.get('frequency_penalty', 0),
             'presence_penalty': kwargs.get('presence_penalty', 0),
         }
 
-        model_extras_kwargs = model_kwargs if mode == 'completion' else {'model_kwargs': model_kwargs}
+        model_extras_kwargs = model_kwargs if mode == 'completion' else {
+            'model_kwargs': model_kwargs}
 
+        model_name = 'openai'
         return llm_cls(
+            bs_api_base=api_base,
             model_name=model_name,
             temperature=kwargs.get('temperature', 0),
             max_tokens=kwargs.get('max_tokens', 256),
@@ -114,11 +123,13 @@ class LLMBuilder:
 
         # model_provider = llm_constant.models[model_name]
 
-        provider_service = LLMProviderService(tenant_id=tenant_id, provider_name=model_provider)
+        provider_service = LLMProviderService(
+            tenant_id=tenant_id, provider_name=model_provider)
         return provider_service.get_credentials(model_name)
 
     @classmethod
     def get_default_provider(cls, tenant_id: str) -> str:
+        return 'openai'
         provider = BaseProvider.get_valid_provider(tenant_id)
         if not provider:
             raise ProviderTokenNotInitError()
@@ -129,3 +140,10 @@ class LLMBuilder:
             provider_name = provider.provider_name
 
         return provider_name
+
+    @classmethod
+    def get_api_base_by_model(cls, model_name: str) -> str:
+        if not model_name:
+            raise ValueError(f"empty model name is not supported.")
+        key = "%sAPI_BASE" % model_name.upper()
+        return os.getenv(key)

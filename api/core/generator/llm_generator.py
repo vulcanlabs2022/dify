@@ -22,56 +22,61 @@ generate_base_model = 'text-davinci-003'
 class LLMGenerator:
     @classmethod
     def generate_conversation_name(cls, tenant_id: str, query, answer):
-        prompt = CONVERSATION_TITLE_PROMPT
-        prompt = prompt.format(query=query)
-        llm: StreamableOpenAI = LLMBuilder.to_llm(
-            tenant_id=tenant_id,
-            model_name='gpt-3.5-turbo',
-            max_tokens=50
-        )
+        # prompt = CONVERSATION_TITLE_PROMPT
+        # prompt = prompt.format(query=query)
+        # llm: StreamableOpenAI = LLMBuilder.to_llm(
+        #     tenant_id=tenant_id,
+        #     model_name='gpt-3.5-turbo',
+        #     max_tokens=50
+        # )
 
-        if isinstance(llm, BaseChatModel):
-            prompt = [HumanMessage(content=prompt)]
+        # if isinstance(llm, BaseChatModel):
+        #     prompt = [HumanMessage(content=prompt)]
 
-        response = llm.generate([prompt])
-        answer = response.generations[0][0].text
+        # response = llm.generate([prompt])
+        # answer = response.generations[0][0].text
+        answer = f'{query:.20}{"..." if len(query) > 20 else ""}'
         return answer.strip()
 
     @classmethod
     def generate_conversation_summary(cls, tenant_id: str, messages):
-        max_tokens = 200
-        model = 'gpt-3.5-turbo'
+        # max_tokens = 200
+        # model = 'gpt-3.5-turbo'
 
-        prompt = CONVERSATION_SUMMARY_PROMPT
-        prompt_with_empty_context = prompt.format(context='')
-        prompt_tokens = TokenCalculator.get_num_tokens(model, prompt_with_empty_context)
-        rest_tokens = llm_constant.max_context_token_length[model] - prompt_tokens - max_tokens - 1
+        # prompt = CONVERSATION_SUMMARY_PROMPT
+        # prompt_with_empty_context = prompt.format(context='')
+        # prompt_tokens = TokenCalculator.get_num_tokens(model, prompt_with_empty_context)
+        # rest_tokens = llm_constant.max_context_token_length[model] - prompt_tokens - max_tokens - 1
 
-        context = ''
-        for message in messages:
-            if not message.answer:
-                continue
+        # context = ''
+        # for message in messages:
+        #     if not message.answer:
+        #         continue
 
-            message_qa_text = "Human:" + message.query + "\nAI:" + message.answer + "\n"
-            if rest_tokens - TokenCalculator.get_num_tokens(model, context + message_qa_text) > 0:
-                context += message_qa_text
+        #     message_qa_text = "Human:" + message.query + "\nAI:" + message.answer + "\n"
+        #     if rest_tokens - TokenCalculator.get_num_tokens(model, context + message_qa_text) > 0:
+        #         context += message_qa_text
 
-        if not context:
-            return '[message too long, no summary]'
+        # if not context:
+        #     return '[message too long, no summary]'
 
-        prompt = prompt.format(context=context)
+        # prompt = prompt.format(context=context)
 
-        llm: StreamableOpenAI = LLMBuilder.to_llm(
-            tenant_id=tenant_id,
-            model_name=model,
-            max_tokens=max_tokens
-        )
+        # llm: StreamableOpenAI = LLMBuilder.to_llm(
+        #     tenant_id=tenant_id,
+        #     model_name=model,
+        #     max_tokens=max_tokens
+        # )
 
-        if isinstance(llm, BaseChatModel):
-            prompt = [HumanMessage(content=prompt)]
+        # if isinstance(llm, BaseChatModel):
+        #     prompt = [HumanMessage(content=prompt)]
 
-        response = llm.generate([prompt])
-        answer = response.generations[0][0].text
+        # response = llm.generate([prompt])
+        # answer = response.generations[0][0].text
+        if len(messages) == 0:
+            return "new conversation"
+        first_query = messages[0].query
+        answer = f'{first_query:.50}{"..." if len(first_query) > 50 else ""}'
         return answer.strip()
 
     @classmethod
@@ -106,7 +111,7 @@ class LLMGenerator:
 
         llm: StreamableOpenAI = LLMBuilder.to_llm(
             tenant_id=tenant_id,
-            model_name='gpt-3.5-turbo',
+            model_name='Ashia-0.1',
             temperature=0,
             max_tokens=256
         )

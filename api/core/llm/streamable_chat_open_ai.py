@@ -8,9 +8,13 @@ from typing import Optional, List, Dict, Any
 from pydantic import root_validator
 
 from core.llm.error_handle_wraps import handle_llm_exceptions, handle_llm_exceptions_async
+import tiktoken
+
+encoding = tiktoken.get_encoding("cl100k_base")
 
 
 class StreamableChatOpenAI(ChatOpenAI):
+    bs_api_base = ''
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
@@ -42,7 +46,7 @@ class StreamableChatOpenAI(ChatOpenAI):
         return {
             **super()._default_params,
             "api_type": 'openai',
-            "api_base": os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"),
+            "api_base": self.bs_api_base,
             "api_version": None,
             "api_key": self.openai_api_key,
             "organization": self.openai_organization if self.openai_organization else None,
@@ -90,3 +94,13 @@ class StreamableChatOpenAI(ChatOpenAI):
             **kwargs: Any,
     ) -> LLMResult:
         return await super().agenerate(messages, stop, callbacks, **kwargs)
+
+    def get_num_tokens(self, text: str) -> int:
+        tokens = encoding.encode(text)
+        return len(tokens)
+
+    def get_num_tokens_from_messages(self, messages: List[BaseMessage]) -> int:
+        total = 0
+        for message in messages:
+            total += self.get_num_tokens(message.content)
+        return total

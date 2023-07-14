@@ -10,7 +10,11 @@ models = {
     'text-curie-001': 'openai',  # 2,049 tokens
     'text-babbage-001': 'openai',  # 2,049 tokens
     'text-ada-001': 'openai',  # 2,049 tokens
-    'text-embedding-ada-002': 'openai'  # 8191 tokens, 1536 dimensions
+    'text-embedding-ada-002': 'openai',  # 8191 tokens, 1536 dimensions
+
+    'openai': 'openai',
+    'Ashia-0.1': 'openai',
+    'Ashia-0.2': 'openai',
 }
 
 max_context_token_length = {
@@ -23,7 +27,11 @@ max_context_token_length = {
     'text-curie-001': 2049,
     'text-babbage-001': 2049,
     'text-ada-001': 2049,
-    'text-embedding-ada-002': 8191
+    'text-embedding-ada-002': 8191,
+    'openai': 2048,
+    'Ashia-0.1': 204800,
+    'Ashia-0.2': 204800,
+
 }
 
 models_by_mode = {
@@ -32,6 +40,10 @@ models_by_mode = {
         'gpt-4-32k',  # 32,768 tokens
         'gpt-3.5-turbo',  # 4,096 tokens
         'gpt-3.5-turbo-16k',  # 16,384 tokens
+        'openai',
+        'Ashia-0.1',
+        'Ashia-0.2',
+
     ],
     'completion': [
         'gpt-4',  # 8,192 tokens
@@ -43,9 +55,13 @@ models_by_mode = {
         'text-curie-001',  # 2,049 tokens
         'text-babbage-001',  # 2,049 tokens
         'text-ada-001'  # 2,049 tokens
+        'openai',
+        'Ashia-0.1',
+        'Ashia-0.2',
+
     ],
     'embedding': [
-        'text-embedding-ada-002'  # 8191 tokens, 1536 dimensions
+        'text-embedding-ada-002',  # 8191 tokens, 1536 dimensions
     ]
 }
 
@@ -86,7 +102,20 @@ model_prices = {
     },
     'text-embedding-ada-002': {
         'usage': Decimal('0.0001'),
-    }
+    },
+    
+    'openai': {
+        'prompt': Decimal('0.002'),
+        'completion': Decimal('0.002')
+    },
+    'Ashia-0.1': {
+        'prompt': Decimal('0.002'),
+        'completion': Decimal('0.002')
+    },
+    'Ashia-0.2': {
+        'prompt': Decimal('0.002'),
+        'completion': Decimal('0.002')
+    },
 }
 
 agent_model_name = 'text-davinci-003'

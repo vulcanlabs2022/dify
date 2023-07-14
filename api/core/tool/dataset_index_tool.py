@@ -26,15 +26,19 @@ class DatasetTool(BaseTool):
                 )
             )
 
-            documents = kw_table_index.search(tool_input, search_kwargs={'k': self.k})
+            documents = kw_table_index.search(
+                tool_input, search_kwargs={'k': self.k})
         else:
             model_credentials = LLMBuilder.get_model_credentials(
                 tenant_id=self.dataset.tenant_id,
-                model_provider=LLMBuilder.get_default_provider(self.dataset.tenant_id),
+                model_provider=LLMBuilder.get_default_provider(
+                    self.dataset.tenant_id),
                 model_name='text-embedding-ada-002'
             )
 
             embeddings = CacheEmbedding(OpenAIEmbeddings(
+                openai_api_base=CacheEmbedding.get_api_base_by_model(
+                    'EMBEDDING'),
                 **model_credentials
             ))
 
@@ -60,11 +64,14 @@ class DatasetTool(BaseTool):
     async def _arun(self, tool_input: str) -> str:
         model_credentials = LLMBuilder.get_model_credentials(
             tenant_id=self.dataset.tenant_id,
-            model_provider=LLMBuilder.get_default_provider(self.dataset.tenant_id),
+            model_provider=LLMBuilder.get_default_provider(
+                self.dataset.tenant_id),
             model_name='text-embedding-ada-002'
         )
 
         embeddings = CacheEmbedding(OpenAIEmbeddings(
+            openai_api_base=CacheEmbedding.get_api_base_by_model(
+                'EMBEDDING'),
             **model_credentials
         ))
 

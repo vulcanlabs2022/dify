@@ -20,6 +20,8 @@ from libs.password import compare_password, hash_password
 from libs.rsa import generate_key_pair
 from models.account import *
 from tasks.mail_invite_member_task import send_invite_member_mail_task
+from services.provider_service import ProviderService
+from models.provider import Provider, ProviderType, ProviderName
 
 
 class AccountService:
@@ -53,7 +55,8 @@ class AccountService:
     def update_account_password(account, password, new_password):
         """update account password"""
         if account.password and not compare_password(password, account.password, account.password_salt):
-            raise CurrentPasswordIncorrectError("Current password is incorrect.")
+            raise CurrentPasswordIncorrectError(
+                "Current password is incorrect.")
 
         # generate password salt
         salt = secrets.token_bytes(16)
@@ -120,9 +123,11 @@ class AccountService:
                 db.session.add(account_integrate)
 
             db.session.commit()
-            logging.info(f'Account {account.id} linked {provider} account {open_id}.')
+            logging.info(
+                f'Account {account.id} linked {provider} account {open_id}.')
         except Exception as e:
-            logging.exception(f'Failed to link {provider} account {open_id} to Account {account.id}')
+            logging.exception(
+                f'Failed to link {provider} account {open_id} to Account {account.id}')
             raise LinkAccountIntegrateError('Failed to link account.') from e
 
     @staticmethod
@@ -198,7 +203,8 @@ class TenantService:
         if not tenant:
             raise TenantNotFound("Tenant not found.")
 
-        ta = TenantAccountJoin.query.filter_by(tenant_id=tenant.id, account_id=account.id).first()
+        ta = TenantAccountJoin.query.filter_by(
+            tenant_id=tenant.id, account_id=account.id).first()
         if ta:
             tenant.role = ta.role
         else:
@@ -209,13 +215,16 @@ class TenantService:
     def switch_tenant(account: Account, tenant_id: int = None) -> None:
         """Switch the current workspace for the account"""
         if not tenant_id:
-            tenant_account_join = TenantAccountJoin.query.filter_by(account_id=account.id).first()
+            tenant_account_join = TenantAccountJoin.query.filter_by(
+                account_id=account.id).first()
         else:
-            tenant_account_join = TenantAccountJoin.query.filter_by(account_id=account.id, tenant_id=tenant_id).first()
+            tenant_account_join = TenantAccountJoin.query.filter_by(
+                account_id=account.id, tenant_id=tenant_id).first()
 
         # Check if the tenant exists and the account is a member of the tenant
         if not tenant_account_join:
-            raise AccountNotLinkTenantError("Tenant not found or account is not a member of the tenant.")
+            raise AccountNotLinkTenantError(
+                "Tenant not found or account is not a member of the tenant.")
 
         # Set the current tenant for the account
         account.current_tenant_id = tenant_account_join.tenant_id
@@ -277,7 +286,7 @@ class TenantService:
         }
         if action not in ['add', 'remove', 'update']:
             raise InvalidActionError("Invalid action.")
-        
+
         if member:
             if operator.id == member.id:
                 raise CannotOperateSelfError("Cannot operate self.")
@@ -296,7 +305,8 @@ class TenantService:
         if operator.id == account.id and TenantService.check_member_permission(tenant, operator, account, 'remove'):
             raise CannotOperateSelfError("Cannot operate self.")
 
-        ta = TenantAccountJoin.query.filter_by(tenant_id=tenant.id, account_id=account.id).first()
+        ta = TenantAccountJoin.query.filter_by(
+            tenant_id=tenant.id, account_id=account.id).first()
         if not ta:
             raise MemberNotInTenantError("Member not in tenant.")
 
@@ -312,7 +322,8 @@ class TenantService:
     @staticmethod
     def update_member_role(tenant: Tenant, member: Account, new_role: str, operator: Account) -> None:
         """Update member role"""
-        TenantService.check_member_permission(tenant, operator, member, 'update')
+        TenantService.check_member_permission(
+            tenant, operator, member, 'update')
 
         target_member_join = TenantAccountJoin.query.filter_by(
             tenant_id=tenant.id,
@@ -320,7 +331,8 @@ class TenantService:
         ).first()
 
         if target_member_join.role == new_role:
-            raise RoleAlreadyAssignedError("The provided role is already assigned to the member.")
+            raise RoleAlreadyAssignedError(
+                "The provided role is already assigned to the member.")
 
         if new_role == 'owner':
             # Find the current owner and change their role to 'admin'
@@ -339,7 +351,8 @@ class TenantService:
         """Dissolve tenant"""
         if not TenantService.check_member_permission(tenant, operator, operator, 'remove'):
             raise NoPermissionError('No permission to dissolve tenant.')
-        db.session.query(TenantAccountJoin).filter_by(tenant_id=tenant.id).delete()
+        db.session.query(TenantAccountJoin).filter_by(
+            tenant_id=tenant.id).delete()
         db.session.delete(tenant)
         db.session.commit()
 
@@ -356,12 +369,25 @@ class RegisterService:
             account.initialized_at = datetime.utcnow()
 
             if open_id is not None or provider is not None:
-                AccountService.link_account_integrate(provider, open_id, account)
+                AccountService.link_account_integrate(
+                    provider, open_id, account)
 
             tenant = TenantService.create_tenant(f"{account.name}'s Workspace")
 
             TenantService.create_tenant_member(tenant, account, role='owner')
             account.current_tenant = tenant
+
+            # add token
+            base64_encrypted_token = ProviderService.get_encrypted_token(
+                tenant=tenant,
+                provider_name=ProviderName('openai'),
+                configs='aaabbbccc'
+            )
+            provider_model = Provider(tenant_id=tenant.id, provider_name='openai',
+                                      provider_type=ProviderType.CUSTOM.value,
+                                      encrypted_config=base64_encrypted_token,
+                                      is_valid=True)
+            db.session.add(provider_model)
 
             db.session.commit()
         except Exception as e:
@@ -386,7 +412,8 @@ class RegisterService:
             account.status = AccountStatus.PENDING.value
             db.session.commit()
         else:
-            TenantService.check_member_permission(tenant, inviter, account, 'add')
+            TenantService.check_member_permission(
+                tenant, inviter, account, 'add')
             ta = TenantAccountJoin.query.filter_by(
                 tenant_id=tenant.id,
                 account_id=account.id
@@ -413,14 +440,16 @@ class RegisterService:
     def generate_invite_token(cls, tenant: Tenant, account: Account) -> str:
         token = str(uuid.uuid4())
         email_hash = sha256(account.email.encode()).hexdigest()
-        cache_key = 'member_invite_token:{}, {}:{}'.format(str(tenant.id), email_hash, token)
+        cache_key = 'member_invite_token:{}, {}:{}'.format(
+            str(tenant.id), email_hash, token)
         redis_client.setex(cache_key, 3600, str(account.id))
         return token
 
     @classmethod
     def revoke_token(cls, workspace_id: str, email: str, token: str):
         email_hash = sha256(email.encode()).hexdigest()
-        cache_key = 'member_invite_token:{}, {}:{}'.format(workspace_id, email_hash, token)
+        cache_key = 'member_invite_token:{}, {}:{}'.format(
+            workspace_id, email_hash, token)
         redis_client.delete(cache_key)
 
     @classmethod
@@ -440,7 +469,8 @@ class RegisterService:
         if not tenant_account:
             return None
 
-        account_id = cls._get_account_id_by_invite_token(workspace_id, email, token)
+        account_id = cls._get_account_id_by_invite_token(
+            workspace_id, email, token)
         if not account_id:
             return None
 
@@ -456,7 +486,8 @@ class RegisterService:
     @classmethod
     def _get_account_id_by_invite_token(cls, workspace_id: str, email: str, token: str) -> Optional[str]:
         email_hash = sha256(email.encode()).hexdigest()
-        cache_key = 'member_invite_token:{}, {}:{}'.format(workspace_id, email_hash, token)
+        cache_key = 'member_invite_token:{}, {}:{}'.format(
+            workspace_id, email_hash, token)
         account_id = redis_client.get(cache_key)
         if not account_id:
             return None

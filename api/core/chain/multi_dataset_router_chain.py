@@ -87,14 +87,14 @@ class MultiDatasetRouterChain(Chain):
         """Convenience constructor for instantiating from destination prompts."""
         llm = LLMBuilder.to_llm(
             tenant_id=tenant_id,
-            model_name='gpt-3.5-turbo',
+            model_name='Ashia-0.1',
             temperature=0,
             max_tokens=1024,
             callbacks=[DifyStdOutCallbackHandler()]
         )
 
         destinations = ["[[{}]]: {}".format(d.id, d.description.replace('\n', ' ') if d.description
-                        else ('useful for when you want to answer queries about the ' + d.name))
+                        else ('用来帮助你回答关于 ' + d.name + ' 的问题'))
                         for d in datasets]
         destinations_str = "\n".join(destinations)
         router_template = MULTI_PROMPT_ROUTER_TEMPLATE.format(
@@ -116,7 +116,7 @@ class MultiDatasetRouterChain(Chain):
 
             description = dataset.description
             if not description:
-                description = 'useful for when you want to answer queries about the ' + dataset.name
+                description = '帮助你回答关于 ' + dataset.name + '的问题'
 
             k = cls._dynamic_calc_retrieve_k(dataset, rest_tokens)
             if k == 0:

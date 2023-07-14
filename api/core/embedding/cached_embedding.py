@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions.ext_database import db
 from libs import helper
 from models.dataset import Embedding
+import os
 
 
 class CacheEmbedding(Embeddings):
@@ -20,13 +21,15 @@ class CacheEmbedding(Embeddings):
         embedding_queue_texts = []
         for text in texts:
             hash = helper.generate_text_hash(text)
-            embedding = db.session.query(Embedding).filter_by(hash=hash).first()
+            embedding = db.session.query(
+                Embedding).filter_by(hash=hash).first()
             if embedding:
                 text_embeddings.append(embedding.get_embedding())
             else:
                 embedding_queue_texts.append(text)
 
-        embedding_results = self._embeddings.embed_documents(embedding_queue_texts)
+        embedding_results = self._embeddings.embed_documents(
+            embedding_queue_texts)
 
         i = 0
         for text in embedding_queue_texts:
@@ -70,3 +73,10 @@ class CacheEmbedding(Embeddings):
             logging.exception('Failed to add embedding to db')
 
         return embedding_results
+
+    @classmethod
+    def get_api_base_by_model(cls, model_name: str) -> str:
+        if not model_name:
+            raise ValueError(f"empty model name is not supported.")
+        key = "%sAPI_BASE" % model_name.upper()
+        return os.getenv(key)

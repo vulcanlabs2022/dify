@@ -36,6 +36,8 @@ class HitTestingService:
         )
 
         embeddings = CacheEmbedding(OpenAIEmbeddings(
+            openai_api_base=CacheEmbedding.get_api_base_by_model(
+                'EMBEDDING'),
             **model_credentials
         ))
 
@@ -75,9 +77,11 @@ class HitTestingService:
             embeddings.embed_query(query)
         ]
 
-        text_embeddings.extend(embeddings.embed_documents([document.page_content for document in documents]))
+        text_embeddings.extend(embeddings.embed_documents(
+            [document.page_content for document in documents]))
 
-        tsne_position_data = cls.get_tsne_positions_from_embeddings(text_embeddings)
+        tsne_position_data = cls.get_tsne_positions_from_embeddings(
+            text_embeddings)
 
         query_position = tsne_position_data.pop(0)
 
@@ -128,11 +132,13 @@ class HitTestingService:
         if perplexity >= embedding_length:
             perplexity = max(embedding_length - 1, 1)
 
-        tsne = TSNE(n_components=2, perplexity=perplexity, early_exaggeration=12.0)
+        tsne = TSNE(n_components=2, perplexity=perplexity,
+                    early_exaggeration=12.0)
         data_tsne = tsne.fit_transform(concatenate_data)
 
         tsne_position_data = []
         for i in range(len(data_tsne)):
-            tsne_position_data.append({'x': float(data_tsne[i][0]), 'y': float(data_tsne[i][1])})
+            tsne_position_data.append(
+                {'x': float(data_tsne[i][0]), 'y': float(data_tsne[i][1])})
 
         return tsne_position_data

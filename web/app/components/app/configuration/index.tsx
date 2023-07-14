@@ -68,7 +68,7 @@ const Configuration: FC = () => {
   })
   const [modelConfig, doSetModelConfig] = useState<ModelConfig>({
     provider: 'openai',
-    model_id: 'gpt-3.5-turbo',
+    model_id: 'Ashia-0.1',
     configs: {
       prompt_template: '',
       prompt_variables: [] as PromptVariable[],

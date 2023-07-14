@@ -1,11 +1,12 @@
 import logging
 from typing import Optional, List, Union, Tuple
+from langchain import PromptTemplate
 
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
-from langchain.schema import BaseMessage, HumanMessage
+from langchain.schema import BaseMessage, HumanMessage, SystemMessage, AIMessage
 from requests.exceptions import ChunkedEncodingError
 
 from core.constant import llm_constant
@@ -36,6 +37,9 @@ class Completion:
         errors: ProviderTokenNotInitError
         """
         query = PromptBuilder.process_template(query)
+        print("if conversation:", conversation)
+        if app_model_config:
+            logging.info(f'appmodel config:{app_model_config.__dict__}')
 
         memory = None
         if conversation:
@@ -48,6 +52,7 @@ class Completion:
             )
 
             inputs = conversation.inputs
+            logging.info(f'conversation inputs: {conversation.inputs}')
 
         rest_tokens_for_context_and_memory = cls.get_validate_rest_tokens(
             mode=app.mode,
@@ -74,13 +79,16 @@ class Completion:
             tenant_id=app.tenant_id,
             agent_mode=app_model_config.agent_mode_dict,
             rest_tokens=rest_tokens_for_context_and_memory,
-            memory=ReadOnlyConversationTokenDBStringBufferSharedMemory(memory=memory) if memory else None,
+            memory=ReadOnlyConversationTokenDBStringBufferSharedMemory(
+                memory=memory) if memory else None,
             conversation_message_task=conversation_message_task
         )
 
         chain_output = ''
         if main_chain:
             chain_output = main_chain.run(query)
+
+        logging.info(f'chain output {chain_output}')
 
         # run the final llm
         try:
@@ -125,7 +133,8 @@ class Completion:
             memory=memory
         )
 
-        final_llm.callbacks = cls.get_llm_callbacks(final_llm, streaming, conversation_message_task)
+        final_llm.callbacks = cls.get_llm_callbacks(
+            final_llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=final_llm,
@@ -149,21 +158,22 @@ class Completion:
         #         if query_param not in inputs:
         #             inputs[query_param] = '{{' + query_param + '}}'
 
+        completion_prompt = """将下面文本作为你的已经学习的知识:
+[文本开始]
+{context}
+[文本结束]
+
+当你回答用户问题时需要注意：
+- 如果你不知道，就回复“抱歉，我不知道”。
+- 如果你不确定答案是否正确，请用户进行确认。
+
+"""
+
         if mode == 'completion':
             prompt_template = JinjaPromptTemplate.from_template(
-                template=("""Use the following CONTEXT as your learned knowledge:
-[CONTEXT]
-{{context}}
-[END CONTEXT]
-
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification. 
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
-""" if chain_output else "")
-                         + (pre_prompt + "\n" if pre_prompt else "")
-                         + "{{query}}\n"
+                template=(completion_prompt if chain_output else "")
+                + (pre_prompt + "\n" if pre_prompt else "")
+                + "{{query}}\n"
             )
 
             if chain_output:
@@ -174,7 +184,8 @@ And answer according to the language of the user's question.
                 #         if context_param not in inputs:
                 #             inputs[context_param] = '{{' + context_param + '}}'
 
-            prompt_inputs = {k: inputs[k] for k in prompt_template.input_variables if k in inputs}
+            prompt_inputs = {
+                k: inputs[k] for k in prompt_template.input_variables if k in inputs}
             prompt_content = prompt_template.format(
                 query=query,
                 **prompt_inputs
@@ -196,7 +207,8 @@ And answer according to the language of the user's question.
 
             if pre_prompt:
                 pre_prompt_inputs = {k: inputs[k] for k in
-                                     JinjaPromptTemplate.from_template(template=pre_prompt).input_variables
+                                     JinjaPromptTemplate.from_template(
+                                         template=pre_prompt).input_variables
                                      if k in inputs}
 
                 if pre_prompt_inputs:
@@ -204,62 +216,77 @@ And answer according to the language of the user's question.
 
             if chain_output:
                 human_inputs['context'] = chain_output
-                human_message_prompt += """Use the following CONTEXT as your learned knowledge.
-[CONTEXT]
-{{context}}
-[END CONTEXT]
+                human_message_prompt += """将下面文本作为知识进行学习，帮助你回答用户的问题
+[文本开始]
+{context}
+[文本结束]
+当你回答用户问题时需要注意：
+- 如果你不知道，就回复“抱歉，我不知道”。
+- 如果你不确定答案是否正确，请用户进行确认。
 
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification. 
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
 """
 
-            if pre_prompt:
-                human_message_prompt += pre_prompt
+            if pre_prompt is not None or chain_output is not None:
+                if pre_prompt is not None:
+                    human_message_prompt += pre_prompt
+                systemMsg = SystemMessage(
+                    content=human_message_prompt, additional_kwargs=human_inputs)
+                Completion.__formatMessage(systemMsg)
+                messages.append(systemMsg)
 
-            query_prompt = "\nHuman: {{query}}\nAI: "
+            new_query = HumanMessage(
+                content=query, additional_kwargs=human_inputs)
+            Completion.__formatMessage(new_query)
 
             if memory:
-                # append chat histories
-                tmp_human_message = PromptBuilder.to_human_message(
-                    prompt_content=human_message_prompt + query_prompt,
-                    inputs=human_inputs
-                )
+                history_messages = memory.buffer
+                for msg in history_messages:
+                    Completion.__formatMessage(msg)
+                    messages.append(msg)
 
-                curr_message_tokens = memory.llm.get_messages_tokens([tmp_human_message])
-                rest_tokens = llm_constant.max_context_token_length[memory.llm.model_name] \
-                              - memory.llm.max_tokens - curr_message_tokens
-                rest_tokens = max(rest_tokens, 0)
-                histories = cls.get_history_messages_from_memory(memory, rest_tokens)
+            messages.append(new_query)
 
-                # disable template string in query
-                # histories_params = JinjaPromptTemplate.from_template(template=histories).input_variables
-                # if histories_params:
-                #     for histories_param in histories_params:
-                #         if histories_param not in human_inputs:
-                #             human_inputs[histories_param] = '{{' + histories_param + '}}'
+            #     # append chat histories
+            #     tmp_human_message = PromptBuilder.to_human_message(
+            #         prompt_content=human_message_prompt + query_prompt,
+            #         inputs=human_inputs
+            #     )
 
-                human_message_prompt += "\n\n" + histories
+            #     curr_message_tokens = memory.llm.get_messages_tokens(
+            #         [tmp_human_message])
+            #     rest_tokens = llm_constant.max_context_token_length[memory.llm.model_name] \
+            #         - memory.llm.max_tokens - curr_message_tokens
+            #     rest_tokens = max(rest_tokens, 0)
+            #     histories = cls.get_history_messages_from_memory(
+            #         memory, rest_tokens)
 
-            human_message_prompt += query_prompt
+            #     # disable template string in query
+            #     # histories_params = JinjaPromptTemplate.from_template(template=histories).input_variables
+            #     # if histories_params:
+            #     #     for histories_param in histories_params:
+            #     #         if histories_param not in human_inputs:
+            #     #             human_inputs[histories_param] = '{{' + histories_param + '}}'
 
-            # construct main prompt
-            human_message = PromptBuilder.to_human_message(
-                prompt_content=human_message_prompt,
-                inputs=human_inputs
-            )
+            #     human_message_prompt += "\n\n" + histories
 
-            messages.append(human_message)
+            # human_message_prompt += query_prompt
 
+            # # construct main prompt
+            # human_message = PromptBuilder.to_human_message(
+            #     prompt_content=human_message_prompt,
+            #     inputs=human_inputs
+            # )
+
+            # messages.append(human_message)
+            logging.info(f"get_main_llm_prompt messages{messages}")
             return messages, ['\nHuman:']
 
     @classmethod
     def get_llm_callbacks(cls, llm: Union[StreamableOpenAI, StreamableChatOpenAI],
                           streaming: bool,
                           conversation_message_task: ConversationMessageTask) -> List[BaseCallbackHandler]:
-        llm_callback_handler = LLMCallbackHandler(llm, conversation_message_task)
+        llm_callback_handler = LLMCallbackHandler(
+            llm, conversation_message_task)
         if streaming:
             return [llm_callback_handler, DifyStreamingStdOutCallbackHandler()]
         else:
@@ -325,10 +352,11 @@ And answer according to the language of the user's question.
             else llm.get_num_tokens_from_messages(prompt)
 
         rest_tokens = model_limited_tokens - max_tokens - prompt_tokens
+        # if rest_tokens < 0:
+        #     raise LLMBadRequestError("Query or prefix prompt is too long, you can reduce the prefix prompt, "
+        #                              "or shrink the max token, or switch to a llm with a larger token limit size.")
         if rest_tokens < 0:
-            raise LLMBadRequestError("Query or prefix prompt is too long, you can reduce the prefix prompt, "
-                                     "or shrink the max token, or switch to a llm with a larger token limit size.")
-
+            rest_tokens = 0
         return rest_tokens
 
     @classmethod
@@ -352,7 +380,7 @@ And answer according to the language of the user's question.
                                 app_model_config: AppModelConfig, user: Account, streaming: bool):
         llm: StreamableOpenAI = LLMBuilder.to_llm(
             tenant_id=app.tenant_id,
-            model_name='gpt-3.5-turbo',
+            model_name='Ashia-0.1',
             streaming=streaming
         )
 
@@ -370,7 +398,8 @@ And answer according to the language of the user's question.
         original_completion = message.answer.strip()
 
         prompt = MORE_LIKE_THIS_GENERATE_PROMPT
-        prompt = prompt.format(prompt=original_prompt, original_completion=original_completion)
+        prompt = prompt.format(prompt=original_prompt,
+                               original_completion=original_completion)
 
         if isinstance(llm, BaseChatModel):
             prompt = [HumanMessage(content=prompt)]
@@ -386,7 +415,8 @@ And answer according to the language of the user's question.
             streaming=streaming
         )
 
-        llm.callbacks = cls.get_llm_callbacks(llm, streaming, conversation_message_task)
+        llm.callbacks = cls.get_llm_callbacks(
+            llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=llm,
@@ -395,3 +425,10 @@ And answer according to the language of the user's question.
         )
 
         llm.generate([prompt])
+
+    def __formatMessage(message: BaseMessage):
+        promptTemplate = PromptTemplate.from_template(
+            message.content)
+        filetered_inputs = {key: message.additional_kwargs[key] for key in message.additional_kwargs.keys(
+        ) if key in promptTemplate.input_variables}
+        message.content = promptTemplate.format(**filetered_inputs)

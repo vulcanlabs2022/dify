@@ -27,6 +27,10 @@ from core.prompt.prompt_builder import PromptBuilder
 from core.prompt.prompt_template import JinjaPromptTemplate
 from core.prompt.prompts import MORE_LIKE_THIS_GENERATE_PROMPT
 from models.model import App, AppModelConfig, Account, Conversation, Message
+from core.tool.dataset_index_tool import DatasetQueryDoc
+from extensions.ext_database import db
+from models.dataset import Dataset
+from core.chain.refine_chain import DocumentQAChain
 
 
 class Completion:
@@ -121,30 +125,85 @@ class Completion:
             model=app_model_config.model_dict,
             streaming=streaming
         )
-
-        # get llm prompt
-        prompt, stop_words = cls.get_main_llm_prompt(
-            mode=mode,
-            llm=final_llm,
-            pre_prompt=app_model_config.pre_prompt,
-            query=query,
-            inputs=inputs,
-            chain_output=chain_output,
-            memory=memory
-        )
-
+        # TODO: add middle llm output
         final_llm.callbacks = cls.get_llm_callbacks(
             final_llm, streaming, conversation_message_task)
+        if inputs.get('agent') == 'refine':
+            logging.info(f'refine agent handing question: {query}')
+            middle_llm = LLMBuilder.to_llm_from_model(
+                tenant_id=tenant_id,
+                model=app_model_config.model_dict,
+                streaming=streaming
+            )
 
-        cls.recale_llm_max_tokens(
-            final_llm=final_llm,
-            prompt=prompt,
-            mode=mode
-        )
+            agent_mode = app_model_config.agent_mode_dict
+            datasets = []
+            if agent_mode and agent_mode.get('enabled'):
+                tools = agent_mode.get('tools', [])
+                for tool in tools:
+                    tool_type = list(tool.keys())[0]
+                    tool_config = list(tool.values())[0]
+                    if tool_type == "dataset":
+                        # get dataset from dataset id
+                        dataset = db.session.query(Dataset).filter(
+                            Dataset.tenant_id == tenant_id,
+                            Dataset.id == tool_config.get("id")
+                        ).first()
+                    if dataset:
+                        datasets.append(dataset)
 
-        response = final_llm.generate([prompt], stop_words)
+            if len(datasets) > 0:
+                doc_query = DatasetQueryDoc(datasets, k=3)
+                docs = doc_query(query)
+                print(f"refine docs:\n{docs}")
+            else:
+                raise ValueError(f'calling refine agent but no dataset')
 
+            qa_chain = DocumentQAChain(llm=middle_llm, docs=docs)
+            initial_response = qa_chain.run(question=query)
+            print(f"run qa response:\n{initial_response}")
+            prompt, stop_words = cls.get_concat_llm_prompt(
+                initial_response, query)
+            print(f"concat promts:\n{prompt}")
+            response = final_llm.generate([prompt], stop_words)
+        else:
+            # get llm prompt
+            prompt, stop_words = cls.get_main_llm_prompt(
+                mode=mode,
+                llm=final_llm,
+                pre_prompt=app_model_config.pre_prompt,
+                query=query,
+                inputs=inputs,
+                chain_output=chain_output,
+                memory=memory
+            )
+            cls.recale_llm_max_tokens(
+                final_llm=final_llm,
+                prompt=prompt,
+                mode=mode
+            )
+            response = final_llm.generate([prompt], stop_words)
         return response
+
+    @classmethod
+    def get_concat_llm_prompt(cls, initial_response: str, question: str) -> Tuple[List[BaseMessage], Optional[List[str]]]:
+        concat_prompt = (
+            "Below is an instruction that describes a task. "
+            "Write a response that appropriately completes the request.\n\n"
+            "### Instruction:\n"
+            "以下为背景知识：\n"
+            "{initial_response}"
+            "\n"
+            "请根据以上背景知识, 回答这个问题：{question}。\n\n"
+            "### Response: "
+        )
+        messages = []
+        concat_template = PromptTemplate(
+            input_variables=["initial_response", "question"], template=concat_prompt)
+        msg = HumanMessage(
+            content=concat_template.format(**{"initial_response": initial_response, "question": question}))
+        messages.append(msg)
+        return messages, ['\nHuman:']
 
     @classmethod
     def get_main_llm_prompt(cls, mode: str, llm: BaseLanguageModel, pre_prompt: str, query: str, inputs: dict,
